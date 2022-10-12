@@ -297,11 +297,20 @@ class Output:
         if self.random_color:
             print('fc {} {} {} {}'.format(
                 len(self.face_mapping),
-                random.uniform(0, 1),
+                # random.uniform(0, 1),
+                0,
                 random.uniform(0, 1),
                 random.uniform(0, 1)),
                 file = self.output
             )
+        # else :
+        #     print('fc {} {} {} {}'.format(
+        #         len(self.face_mapping),
+        #         1,
+        #         0,
+        #         0),
+        #         file = self.output
+        #     )
 
     def edit_face(self, index, face):
         """
@@ -313,6 +322,14 @@ class Output:
                 self.vertex_mapping[face.b] + 1,
                 self.vertex_mapping[face.c] + 1
             ),
+            file = self.output
+        )
+       
+        print('fc {} {} {} {}'.format(
+            len(self.face_mapping),
+            1,
+            0,
+            0),
             file = self.output
         )
 
