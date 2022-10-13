@@ -24,11 +24,11 @@ class Decimater(obja.Model):
         for (face_index, face) in enumerate(self.faces):
             operations.append(('face', (face_index, face)))
         
-        for _ in range(20):
+        for i in range(64):
             try:
                 deletion = simulator.deletion()
             except ValueError:
-                print("Error")
+                print(f"Error at step {i}")
                 break
             # deletion = dict(
             #     i_del=v_del.idx,
@@ -76,9 +76,9 @@ def main():
     """
     np.seterr(invalid = 'raise')
     model = Decimater()
-    model.parse_file('example/suzanne.obj')
+    model.parse_file('example/sphere.obj')
 
-    with open('example/suzanne.obja', 'w') as output:
+    with open('example/sphere.obja', 'w') as output:
         model.contract(output)
 
 

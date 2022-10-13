@@ -29,22 +29,16 @@ class Face(obja.Face):
         super().__init__(a, b, c, visible)
         self.is_deleted = False
 
-# >> 266
-# Error : vdel.idx=266
-# 266
-# 268
-# [248, 264, 268]
-# [246, 248, 266, 270, 244]
-# [266, 248, 264]
 
 class Simulator:
     """
     Classe permettant la simulation d'une compression d'un objet 3D suivant l'algorithme SQUEEZE 
+
+    Args:
+            vertices (list(np.array)): list of 3-elements np.arrays containing the x, y, z coordinates.
+            faces (list(Face)): list of Faces objects containing the indexes a, b, c of the vertices in a face. 
     """
     def __init__(self, vertices, faces):
-        self._vertices = [Vertex(idx, vertex, faces) for idx, vertex in enumerate(vertices)]
-        self._faces = [Face(face.a, face.b, face.c) for face in faces]
-        
         problem = []
         for vertex in range(len(vertices)):
             n_faces = 0
@@ -53,18 +47,50 @@ class Simulator:
                     n_faces += 1
             if n_faces < 3:
                 problem.append(vertex)
-        print(problem)
         assert not problem
 
-    def load_M(self, vertices, faces):
-        """Load le model initial.
-
-        Args:
-            vertices (list(np.array)): list of 3-elements np.arrays containing the x, y, z coordinates.
-            faces (list(Face)): list of Faces objects containing the indexes a, b, c of the vertices in a face. 
-        """
-        self._vertices = [Vertex(idx, vertex, faces) for idx, vertex in enumerate(vertices)]
         self._faces = [Face(face.a, face.b, face.c) for face in faces]
+        self._edges = []
+        self._vertices = [Vertex(idx, vertex, faces) for idx, vertex in enumerate(vertices)]
+
+    def delete_oriented_edge(self, v_del, v_split):
+        # delete the two faces that contain v_del and v_split
+        f_del = []
+        for i, face in enumerate(self._faces):
+            if not face.is_deleted and v_del.idx in [face.a, face.b, face.c] and v_split.idx in [face.a, face.b, face.c]:
+                f_del.append(i)
+                self._faces[i].is_deleted = True
+        if len(f_del) != 2:
+            raise(ValueError)
+        
+        # modify the faces that contain v_del only
+        f_modified = []
+        for i, face in enumerate(self._faces):
+            if not face.is_deleted and v_del.idx in [face.a, face.b, face.c]:
+                f_modified.append(i)
+                v_idx_in_face = [face.a, face.b, face.c].index(v_del.idx)
+                setattr(face, ['a', 'b', 'c'][v_idx_in_face], v_split.idx)
+                self._faces[i] = face
+        
+        # delete the edges linking v_del to its neighbours and link them to v_split
+        neighbours = v_del.neighbours
+        for i in neighbours:
+            neighbor = self._vertices[i]
+            neighbor.delete_neighbor(v_del.idx)
+            neighbor.add_neighbor(v_split.idx)
+            v_split.add_neighbor(i)
+            self._vertices[i] = neighbor
+        self._vertices[v_split.idx] = v_split
+        self._vertices[v_del.idx] = v_del
+
+        result = dict(
+            i_del=v_del.idx,
+            i_split=v_split.idx,
+            v_del=v_del.coordinates,
+            f_del=tuple(f_del),
+            f_modified=f_modified,
+        )
+        return result
 
     def deletion(self):
         """Renvoie les infos de la prochaine arête à supprimer et la supprime.
@@ -86,58 +112,10 @@ class Simulator:
             v_del = self._vertices[np.random.randint(0, len(self._vertices))]
             found = not v_del.is_deleted
         v_del.is_deleted = True
-        print(v_del.idx)
         neighbours = v_del.neighbours
         v_split = self._vertices[neighbours[np.random.randint(0, len(neighbours))]]
 
-        # print(v_del.idx)
-        # print(v_split.idx)
-        # print(v_del.neighbours)
-        # print(v_split.neighbours)
-        # for i, face in enumerate(self._faces):
-        #     if not face.is_deleted and v_del.idx in [face.a, face.b, face.c]:
-        #         print([face.a, face.b, face.c])
-
-        # delete the two faces that contain v_del and v_split
-        f_del = []
-        for i, face in enumerate(self._faces):
-            if not face.is_deleted and v_del.idx in [face.a, face.b, face.c] and v_split.idx in [face.a, face.b, face.c]:
-                f_del.append(i)
-                self._faces[i].is_deleted = True
-        if len(f_del) != 2:
-            print(f"Error : v_del.idx={v_del.idx} - v_split.idx={v_split.idx}")
-            print(len(f_del))
-            for i, face in enumerate(self._faces):
-                if v_del.idx in [face.a, face.b, face.c]:
-                    print([face.a, face.b, face.c])
-            raise(ValueError)
-        
-        # modify the faces that contain v_del only
-        f_modified = []
-        for i, face in enumerate(self._faces):
-            if not face.is_deleted and v_del.idx in [face.a, face.b, face.c]:
-                f_modified.append(i)
-                v_idx_in_face = [face.a, face.b, face.c].index(v_del.idx)
-                setattr(face, ['a', 'b', 'c'][v_idx_in_face], v_split.idx)
-                self._faces[i] = face
-        
-        # delete the edges linking v_del to its neighbours and link them to v_split
-        for i in neighbours:
-            neighbor = self._vertices[i]
-            neighbor.delete_neighbor(v_del.idx)
-            neighbor.add_neighbor(v_split.idx)
-            v_split.add_neighbor(i)
-            self._vertices[i] = neighbor
-        self._vertices[v_split.idx] = v_split
-        self._vertices[v_del.idx] = v_del
-
-        result = dict(
-            i_del=v_del.idx,
-            i_split=v_split.idx,
-            v_del=v_del.coordinates,
-            f_del=tuple(f_del),
-            f_modified=f_modified,
-        )
+        result = self.delete_oriented_edge(v_del, v_split)
         return result
 
     def get_M0(self):

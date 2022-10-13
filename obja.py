@@ -299,7 +299,7 @@ class Output:
                 len(self.face_mapping),
                 # random.uniform(0, 1),
                 0,
-                random.uniform(0, 1),
+                0,
                 random.uniform(0, 1)),
                 file = self.output
             )
@@ -326,8 +326,8 @@ class Output:
         )
        
         print('fc {} {} {} {}'.format(
-            len(self.face_mapping),
-            1,
+            self.face_mapping[index] + 1,
+            random.uniform(0, 1),
             0,
             0),
             file = self.output
