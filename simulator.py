@@ -1,7 +1,11 @@
-import copy
-from multiprocessing.sharedctypes import Value
 import numpy as np
-import obja
+
+
+class NoMoreCompression(Exception):
+    pass
+
+class GeometricalProblem(Exception):
+    pass
 
 class Vertex:
     """Classe simplifiant la représentation/manipulation de la connectivité d'un sommet
@@ -59,16 +63,15 @@ class Simulator:
             if (a, b) not in self._edges and (b, a) not in self._edges:
                 self._edges.append((a, b))
 
-    def delete_oriented_edge(self, v_del, v_del_idx, v_split, v_split_idx):
+    def delete_oriented_edge(self, v_del, i_del, v_split, i_split):
         # delete the two faces that contain v_del and v_split
         f_del = []
         for i in self._faces_exists:
             face = self._faces[i]
-            if v_del_idx in [face.a, face.b, face.c] and v_split_idx in [face.a, face.b, face.c]:
+            if i_del in [face.a, face.b, face.c] and i_split in [face.a, face.b, face.c]:
                 f_del.append(i)
         if len(f_del) != 2:
-            print("Problem Houston")
-            raise ValueError
+            raise GeometricalProblem(f"Edge to delete is part of {len(f_del)} triangles instead of 2.")
         for i in f_del:
             del(self._faces_exists[self._faces_exists.index(i)])
         
@@ -76,26 +79,55 @@ class Simulator:
         f_modified = []
         for i in self._faces_exists:
             face = self._faces[i]
-            if v_del_idx in [face.a, face.b, face.c]:
+            if i_del in [face.a, face.b, face.c]:
                 f_modified.append(i)
-                v_idx_in_face = [face.a, face.b, face.c].index(v_del_idx)
-                setattr(face, ['a', 'b', 'c'][v_idx_in_face], v_split_idx)
+                v_idx_in_face = [face.a, face.b, face.c].index(i_del)
+                setattr(face, ['a', 'b', 'c'][v_idx_in_face], i_split)
                 self._faces[i] = face
+
+        common_neigbhours = []
+        for i in f_del:
+            face = self._faces[i]
+            for idx in [face.a, face.b, face.c]:
+                if idx != i_del and idx != i_split:
+                    common_neigbhours.append(idx)
+        if len(common_neigbhours) != 2:
+            raise GeometricalProblem(f"Edge to delete has {len(common_neigbhours)} common neighbours with v_split, instead of 2.")
+        n_1 = common_neigbhours[0]
+        n_2 = common_neigbhours[1]
+
+        # modify the edges that contain v_del only and delete the edges to v_del of neighbours common to v_split and v_del
+        edges_to_delete = []
+        for i, edge in enumerate(self._edges):
+            if i_del in edge:
+                if n_1 in edge or n_2 in edge or i_split in edge:
+                    edges_to_delete.append(i)
+                else:
+                    (a, b) = edge
+                    if i_del == a:
+                        a = i_split
+                    else:
+                        b = i_split
+                    self._edges[i] = (a, b)
+        if len(edges_to_delete) != 3:
+            raise GeometricalProblem(f"Too many edges were deleted : {len(edges_to_delete)} instead of 3.")
+        for i in reversed(sorted(edges_to_delete)):
+            del(self._edges[i])
         
         # delete the edges linking v_del to its neighbours and link them to v_split
         neighbours = v_del.neighbours
         for i in neighbours:
             neighbor = self._vertices[i]
-            neighbor.delete_neighbor(v_del_idx)
-            neighbor.add_neighbor(v_split_idx)
+            neighbor.delete_neighbor(i_del)
+            neighbor.add_neighbor(i_split)
             v_split.add_neighbor(i)
             self._vertices[i] = neighbor
-        self._vertices[v_split_idx] = v_split
-        self._vertices[v_del_idx] = v_del
+        self._vertices[i_split] = v_split
+        self._vertices[i_del] = v_del
 
         result = dict(
-            i_del=v_del_idx,
-            i_split=v_split_idx,
+            i_del=i_del,
+            i_split=i_split,
             v_del=v_del.coordinates,
             f_del=tuple(f_del),
             f_modified=f_modified,
@@ -115,7 +147,6 @@ class Simulator:
     def generate_batch(self):
         self._batch = []
         self._i_batch = 0
-        edges_to_delete = []
         edges_to_select = []
 
         # 2. For each edge e = (v1, v2) that will be collapsed and
@@ -132,6 +163,7 @@ class Simulator:
             valid = True
             for w in neighbours:
                 valid *= self._is_valid_triangle(i1, i2, w)
+            valid *= len(neighbours) == 2
             if valid and len(neighbours) > 1:
                 edges_to_select.append(i)
 
@@ -141,7 +173,6 @@ class Simulator:
             edge_idx = edges_to_select[i_rand]
 
             # delete edge
-            edges_to_delete.append(edge_idx)
             del(edges_to_select[i_rand])
             edge = self._edges[edge_idx]
             self._batch.append(edge)
@@ -173,9 +204,6 @@ class Simulator:
             for i in reversed(sorted(edges_not_to_select)):
                 del(edges_to_select[i])
 
-        for i in reversed(sorted(edges_to_delete)):
-            del(self._edges[i])
-
     def deletion(self):
         """Renvoie les infos de la prochaine arête à supprimer et la supprime.
 
@@ -192,20 +220,18 @@ class Simulator:
 
         # choose next oriented edge to collapse
         if self._i_batch >= len(self._batch):
-            if self._batch:
-                print("1 batch OK")
-                raise ValueError
-            else:
-                self.generate_batch()
-        (v_del_idx, v_split_idx) = self._batch[self._i_batch]
+            self.generate_batch()
+        if not self._batch:
+            raise NoMoreCompression("No more edges respecting the topological constraints")
+        (i_del, i_split) = self._batch[self._i_batch]
         self._i_batch += 1
 
 
-        v_del = self._vertices[v_del_idx]
-        v_split = self._vertices[v_split_idx]
-        del(self._vertices_exists[self._vertices_exists.index(v_del_idx)])
+        v_del = self._vertices[i_del]
+        v_split = self._vertices[i_split]
+        del(self._vertices_exists[self._vertices_exists.index(i_del)])
 
-        result = self.delete_oriented_edge(v_del, v_del_idx, v_split, v_split_idx)
+        result = self.delete_oriented_edge(v_del, i_del, v_split, i_split)
         return result
 
     def get_M0(self):

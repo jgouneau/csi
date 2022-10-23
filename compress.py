@@ -2,7 +2,6 @@
 
 import obja
 import numpy as np
-import sys
 import simulator as sim
 
 class Decimater(obja.Model):
@@ -24,11 +23,19 @@ class Decimater(obja.Model):
         for (face_index, face) in enumerate(self.faces):
             operations.append(('face', (face_index, face)))
         
-        for i in range(100000):
+        compressing = True
+        steps = 0
+        while compressing:
+            steps += 1
             try:
                 deletion = simulator.deletion()
-            except ValueError:
-                print(f"Error at step {i}")
+            except sim.NoMoreCompression:
+                print(f"Compression done after {steps} steps.")
+                compressing = False
+                break
+            except sim.GeometricalProblem:
+                print(f"Compression stopped because of a geometrical problem : {steps} steps done.")
+                compressing = False
                 break
             # deletion = dict(
             #     i_del=v_del.idx,
@@ -42,7 +49,7 @@ class Decimater(obja.Model):
                 operations.append(('edit_face', (f_modified, deletion['i_del'], deletion['i_split'])))
 
         # Write the result in output file
-        output_model = obja.Output(output, random_color=False)
+        output_model = obja.Output(output, random_color=True)
 
         for operation in operations:
             ty, args = operation
@@ -55,21 +62,20 @@ class Decimater(obja.Model):
             elif ty == "del_face":
                 face_id = args
                 face = self.faces[face_id]
-                # face.a = 0
-                # face.b = 0
-                # face.c = 0
-                output_model.edit_face(face_id, face, color=True)
+                face.a = 0
+                face.b = 0
+                face.c = 0
+                output_model.edit_face(face_id, face)
             elif ty == "edit_face":
                 (face_id, i_del, i_split) = args
                 face = self.faces[face_id]
                 v_idx_in_face = [face.a, face.b, face.c].index(i_del)
-                # setattr(face, ['a', 'b', 'c'][v_idx_in_face], i_split)
+                setattr(face, ['a', 'b', 'c'][v_idx_in_face], i_split)
                 self.faces[face_id] = face
                 output_model.edit_face(face_id, face)
             else:
                 (index, value) = args
                 output_model.edit_vertex(index, value)
-
 def main():
     """
     Runs the program on the model given as parameter.
