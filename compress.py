@@ -24,7 +24,7 @@ class Decimater(obja.Model):
         for (face_index, face) in enumerate(self.faces):
             operations.append(('face', (face_index, face)))
         
-        for i in range(64):
+        for i in range(100000):
             try:
                 deletion = simulator.deletion()
             except ValueError:
@@ -42,7 +42,7 @@ class Decimater(obja.Model):
                 operations.append(('edit_face', (f_modified, deletion['i_del'], deletion['i_split'])))
 
         # Write the result in output file
-        output_model = obja.Output(output, random_color=True)
+        output_model = obja.Output(output, random_color=False)
 
         for operation in operations:
             ty, args = operation
@@ -55,15 +55,15 @@ class Decimater(obja.Model):
             elif ty == "del_face":
                 face_id = args
                 face = self.faces[face_id]
-                face.a = 0
-                face.b = 0
-                face.c = 0
-                output_model.edit_face(face_id, face)
+                # face.a = 0
+                # face.b = 0
+                # face.c = 0
+                output_model.edit_face(face_id, face, color=True)
             elif ty == "edit_face":
                 (face_id, i_del, i_split) = args
                 face = self.faces[face_id]
                 v_idx_in_face = [face.a, face.b, face.c].index(i_del)
-                setattr(face, ['a', 'b', 'c'][v_idx_in_face], i_split)
+                # setattr(face, ['a', 'b', 'c'][v_idx_in_face], i_split)
                 self.faces[face_id] = face
                 output_model.edit_face(face_id, face)
             else:
@@ -76,9 +76,9 @@ def main():
     """
     np.seterr(invalid = 'raise')
     model = Decimater()
-    model.parse_file('example/sphere.obj')
+    model.parse_file('example/bunny.obj')
 
-    with open('example/sphere.obja', 'w') as output:
+    with open('example/bunny.obja', 'w') as output:
         model.contract(output)
 
 
