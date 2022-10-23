@@ -281,7 +281,7 @@ class Output:
         else:
             print('ev {} {} {} {}'.format(self.vertex_mapping[index] + 1, vertex[0], vertex[1],vertex[2]), file = self.output)
 
-    def add_face(self, index, face):
+    def add_face(self, index, face, color=False):
         """
         Adds a face to the model.
         """
@@ -294,24 +294,25 @@ class Output:
             file = self.output
         )
 
-        if self.random_color:
+        if color :
+            print('fc {} {} {} {}'.format(
+                self.face_mapping[index] + 1,
+                color[0],
+                color[1],
+                color[2]),
+                file = self.output
+            )
+        elif self.random_color:
             print('fc {} {} {} {}'.format(
                 len(self.face_mapping),
                 # random.uniform(0, 1),
-                0,
-                0,
+                random.uniform(0, 0.0),
+                # random.uniform(0, 1),
+                random.uniform(0, 0),
                 random.uniform(0, 1)),
                 file = self.output
             )
-        # else :
-        #     print('fc {} {} {} {}'.format(
-        #         len(self.face_mapping),
-        #         1,
-        #         0,
-        #         0),
-        #         file = self.output
-        #     )
-
+     
     def edit_face(self, index, face):
         """
         Changes the indices of the vertices of the specified face.
@@ -327,11 +328,12 @@ class Output:
        
         print('fc {} {} {} {}'.format(
             self.face_mapping[index] + 1,
-            random.uniform(0, 1),
+            1,
             0,
             0),
             file = self.output
         )
+
 
 def main():
     if len(sys.argv) == 1:
