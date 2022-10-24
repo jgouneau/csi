@@ -11,16 +11,22 @@ class GeometricalProblem(Exception):
 class Vertex:
     """Classe simplifiant la représentation/manipulation de la connectivité d'un sommet
     """
-    def __init__(self, idx, vertex, edges):
+    def __init__(self, idx, vertex, edges, faces):
         self.idx = idx
         self.coordinates = vertex
         self.neighbours = []
+        self.nearfaces = []
         for edge in edges:
             (a, b) = edge
             if idx == a:
                 self.add_neighbor(b)
             elif idx == b:
                 self.add_neighbor(a)
+        for face in faces:
+            (a, b, c) = face
+            if idx == a or idx == b or idx == c:
+                self.nearfaces.append(face)
+
     
     def delete_neighbor(self, v_del_idx):
         del(self.neighbours[self.neighbours.index(v_del_idx)])
@@ -54,7 +60,7 @@ class Simulator:
         self._edges = []
         for face in faces:
             self._add_face_edges(face)
-        self._vertices = [Vertex(idx, vertex, self._edges) for idx, vertex in enumerate(vertices)]
+        self._vertices = [Vertex(idx, vertex, self._edges, self._faces) for idx, vertex in enumerate(vertices)]
         self._vertices_exists = list(range(len(vertices)))
         self._batch = []
         self._i_batch = 0
@@ -173,6 +179,13 @@ class Simulator:
             i_rand = np.random.randint(0, len(edges_to_select))
             edge_idx = edges_to_select[i_rand]
 
+            """ costs = []
+            for i in range(len(edges_to_select)):
+                v1, v2 = edges_to_select[i]
+                current_cost = self.get_contraction_cost(self, self._vertices[v1])
+                costs.append(current_cost)
+            edge_idx = np.argmin(costs) """
+
             # delete edge
             del(edges_to_select[i_rand])
             edge = self._edges[edge_idx]
@@ -246,3 +259,40 @@ class Simulator:
         """
         M0 = {"faces": self._faces_exists, "vertices": self._vertices_exists}
         return M0
+
+    def get_G_matrix(self, v):
+        """Retourne la matrice G permettant le calcul de l'erreur sur un sommet"""
+
+        near_faces = v.nearfaces
+        G = np.matrix([0,0,0,0],
+                      [0,0,0,0],
+                      [0,0,0,0],
+                      [0,0,0,0])
+        for face in near_faces:
+            a,b,c = face
+
+            # Nous choisissons 2 vecteurs appartenant au plan définit par la face
+            vec1 = self._vertices[c].coordinates - self._vertices[a].coordinates 
+            vec2 = self._vertices[b].coordinates - self._vertices[a].coordinates
+            
+            #Nous cherchons à obtenir les 4 coefficients (x,y,z,d) de l'équation du plan défini par la face
+            cp = np.cross(vec1, vec2)
+            x, y, z = cp
+            d = np.dot(cp, self._vertices[c].coordinates)
+
+            G += np.matrix([x*x,x*y,x*z,x*d],
+                           [x*y, y*y,y*z, y*d],
+                           [x*z, y*z, z*z, z*d],
+                           [x*d, y*d, z*d, d*d])
+        return G
+    
+    def get_contraction_cost(self, v):
+
+        """Retourne le cout/erreur associé à un sommet"""
+
+        a,b,c = v.coordinates
+        G = self.get_G_Matrix(self, v)
+
+        # v_transpose * G * v où v_transpose = (a,b,c,1)
+        cost = G[0][0]*a*a + 2*G[1][2]*a*b + 2*G[1][3]*a*c + 2*G[1][4]*a + G[2][2]*b*b + 2*G[2][3]*b*c + 2*G[2][4]*b + G[3][3]*c*c + 2*G[3][4]*c + G[4][4]*a*b
+        return cost
