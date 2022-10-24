@@ -1,3 +1,4 @@
+from tkinter import SEL_FIRST
 import numpy as np
 
 
@@ -219,8 +220,11 @@ class Simulator:
         """
 
         # choose next oriented edge to collapse
+        new_batch = False
         if self._i_batch >= len(self._batch):
             self.generate_batch()
+            print(f"Next batch: {len(self._batch)} edges selected")
+            new_batch = True
         if not self._batch:
             raise NoMoreCompression("No more edges respecting the topological constraints")
         (i_del, i_split) = self._batch[self._i_batch]
@@ -232,7 +236,7 @@ class Simulator:
         del(self._vertices_exists[self._vertices_exists.index(i_del)])
 
         result = self.delete_oriented_edge(v_del, i_del, v_split, i_split)
-        return result
+        return result, new_batch
 
     def get_M0(self):
         """Retourne le model simplifié.
@@ -240,5 +244,5 @@ class Simulator:
         Returns:
             _type_: _description_
         """
-        M0 = None
+        M0 = {"faces": self._faces_exists, "vertices": self._vertices_exists}
         return M0

@@ -306,14 +306,14 @@ class Output:
             print('fc {} {} {} {}'.format(
                 len(self.face_mapping),
                 # random.uniform(0, 1),
-                random.uniform(0, 0.0),
+                random.uniform(0, 1.0),
                 # random.uniform(0, 1),
-                random.uniform(0, 0),
+                random.uniform(0, 0.5),
                 random.uniform(0, 1)),
                 file = self.output
             )
      
-    def edit_face(self, index, face):
+    def edit_face(self, index, face, color=False):
         """
         Changes the indices of the vertices of the specified face.
         """
@@ -325,14 +325,31 @@ class Output:
             ),
             file = self.output
         )
-       
+
+        if color :
+            print('fc {} {} {} {}'.format(
+                self.face_mapping[index] + 1,
+                1,
+                0,
+                0),
+                file = self.output
+            )
+
+
+    def color_face(self, index, color):
+        """
+        Changes the color of the specified face.
+        """
         print('fc {} {} {} {}'.format(
             self.face_mapping[index] + 1,
-            1,
-            0,
-            0),
+            color[0],
+            color[1],
+            color[2]),
             file = self.output
         )
+
+
+   
 
 
 def main():

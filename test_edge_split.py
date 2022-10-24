@@ -3,10 +3,11 @@
 import obja
 import numpy as np
 import sys
+import simulator
 
 class Decimater(obja.Model):
     """
-    A simple class that decimates a 3D model stupidly.
+    SQUEZZE
     """
     def __init__(self):
         super().__init__()
@@ -14,6 +15,51 @@ class Decimater(obja.Model):
         # self.deleted_vertices = set()
         self.deleted_faces = []
         self.deleted_vertices = []
+
+    def edge_collapse(self, vsplit, vdel):
+        """ Collapse an edge by combining the two vertex into one
+
+        Args
+            vsplit: The vertex that is kept to be splitted during the deccompression
+            vdel: The deleted vertex during the compression
+        Raises:
+            Error: S'il n'y a plus d'arêtes à supprimer ; il faut alors appeler get_m0.
+
+        Returns:
+            operations: The list of the operations carried out for the compression
+        """
+
+        operations = []
+        # Iterate through the faces
+        for (face_index, face) in enumerate(self.faces):
+            if face_index not in self.deleted_faces:
+                if vdel in [face.a,face.b,face.c]:
+                    if vsplit in [face.a,face.b,face.c] :
+                        # Delete the faces containing vdel and vsplit
+                        self.deleted_faces.append(face_index)
+                        operations.append(('face_color', face_index, face))
+
+                    else : 
+                        # Modify the faces linked to vdel
+                        if vdel == face.a:
+                            operations.append(('ef', face_index, face.clone()))
+                            face.a = vsplit
+                        elif vdel == face.b:
+                            operations.append(('ef', face_index, face.clone()))
+                            face.b = vsplit
+                        else:
+                            operations.append(('ef', face_index, face.clone()))
+                            face.c = vsplit
+                        
+                        self.faces[face_index] = face
+
+        # Delete the vertex
+        self.deleted_vertices.append(vdel)
+        operations.append(('vertex', vdel, self.vertices[vdel]))
+
+        return operations
+
+        
 
     def contract(self, output):
         """
@@ -25,35 +71,10 @@ class Decimater(obja.Model):
         vsplit_list = [160, 135, 130, 120, 141, 95]
         vdel_list =   [161, 136, 131, 121, 143, 97]
 
-        ## Edge collapse
+        ## Collapse the selected edges
         for vsplit, vdel in zip(vsplit_list, vdel_list):
-            # Iterate through the faces
-            for (face_index, face) in enumerate(self.faces):
-                if face_index not in self.deleted_faces:
-                    if vdel in [face.a,face.b,face.c]:
-                        if vsplit in [face.a,face.b,face.c] :
-                            # Delete the faces containing vdel and vsplit
-                            self.deleted_faces.append(face_index)
-                            operations.append(('face_color', face_index, face))
-
-                        else : 
-                            # Modify the faces linked to vdel
-                            if vdel == face.a:
-                                operations.append(('ef', face_index, face.clone()))
-                                face.a = vsplit
-                            elif vdel == face.b:
-                                operations.append(('ef', face_index, face.clone()))
-                                face.b = vsplit
-                            else:
-                                operations.append(('ef', face_index, face.clone()))
-                                face.c = vsplit
-                            
-                            self.faces[face_index] = face
-
-            # Delete the vertex
-            self.deleted_vertices.append(vdel)
-            operations.append(('vertex', vdel, self.vertices[vdel]))
-
+            operations += self.edge_collapse(vsplit, vdel)
+            
         #Build the M0 model
         # Iterate through the vertex
         for (vertex_index, vertex) in enumerate(self.vertices):
@@ -102,7 +123,7 @@ class Decimater(obja.Model):
             elif ty == "ev":
                 output_model.edit_vertex(index, value)            
             elif ty == "ef":
-                output_model.edit_face(index, value)
+                output_model.edit_face(index, value, color=True)
 
 def main():
     """
