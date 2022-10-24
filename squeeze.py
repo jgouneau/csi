@@ -160,8 +160,9 @@ def main():
                         default="example/",
                         help='The directory where the obj model is placed, example/ per default')
     parser.add_argument('--timestamp', 
-                        type=Boolean,
                         default=False,
+                        const=True,
+                        action='store_const',
                         help='Create the obja with a timestamp in the name of the file, False per default')
     args = parser.parse_args()
 
