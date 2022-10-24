@@ -23,8 +23,7 @@ class Vertex:
             elif idx == b:
                 self.add_neighbor(a)
         for face in faces:
-            (a, b, c) = face
-            if idx == a or idx == b or idx == c:
+            if idx == face.a or idx == face.b or idx == face.c:
                 self.nearfaces.append(face)
 
     

@@ -163,14 +163,14 @@ def main():
                         default=False,
                         const=True,
                         action='store_const',
-                        help='Create the obja with a timestamp in the name of the file, False per default')
+                        help='Create the obja with a timestamp in the name of the file if specified')
     args = parser.parse_args()
 
 
     timestamp = args.timestamp
     obj = args.obj_file.split(".obj")[0]
     obj = obj.split(".obj")[0]
-    directory = "example/"
+    directory = args.model_directory
 
     path_to_obj = directory + obj + ".obj"
     path_to_obja = directory + obj + ".obja"
