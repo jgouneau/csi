@@ -28,7 +28,7 @@ class Decimater(obja.Model):
         while compressing:
             steps += 1
             try:
-                deletion = simulator.deletion()
+                deletion, new_batch = simulator.deletion()
             except sim.NoMoreCompression:
                 print(f"Compression done after {steps} steps.")
                 compressing = False
