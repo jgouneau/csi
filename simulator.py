@@ -15,24 +15,31 @@ class Vertex:
         self.idx = idx
         self.coordinates = vertex
         self.neighbours = []
-        self.nearfaces = []
         for edge in edges:
             (a, b) = edge
             if idx == a:
                 self.add_neighbor(b)
             elif idx == b:
                 self.add_neighbor(a)
-        for face in faces:
-            if idx == face.a or idx == face.b or idx == face.c:
-                self.nearfaces.append(face)
-
+        self.nearfaces = []
+        for i, face in enumerate(faces):
+            if idx in [face.a, face.b, face.c]:
+                self.nearfaces.append(i)
     
-    def delete_neighbor(self, v_del_idx):
+    def del_neighbor(self, v_del_idx):
         del(self.neighbours[self.neighbours.index(v_del_idx)])
     
     def add_neighbor(self, v_add_idx):
         if v_add_idx not in self.neighbours and v_add_idx != self.idx:
             self.neighbours.append(v_add_idx)
+        
+    def del_nearface(self, f_del_idx):
+        if f_del_idx in self.nearfaces:
+            del(self.nearfaces[self.nearfaces.index(f_del_idx)])
+    
+    def add_nearface(self, f_add_idx):
+        if f_add_idx not in self.nearfaces:
+            self.nearfaces.append(f_add_idx)
 
 
 class Simulator:
@@ -44,16 +51,6 @@ class Simulator:
             faces (list(Face)): list of Faces objects containing the indexes a, b, c of the vertices in a face. 
     """
     def __init__(self, vertices, faces):
-        problem = []
-        for vertex in range(len(vertices)):
-            n_faces = 0
-            for face in faces:
-                if vertex in [face.a, face.b, face.c]:
-                    n_faces += 1
-            if n_faces < 3:
-                problem.append(vertex)
-        # assert not problem
-
         self._faces = [face.clone() for face in faces]
         self._faces_exists = list(range(len(faces)))
         self._edges = []
@@ -70,37 +67,39 @@ class Simulator:
                 self._edges.append((a, b))
 
     def delete_oriented_edge(self, v_del, i_del, v_split, i_split):
-        # delete the two faces that contain v_del and v_split
+        neighbours = v_del.neighbours
+
+        # modify the faces that contain v_del only and delete the two faces that contain v_del and v_split
         f_del = []
-        for i in self._faces_exists:
-            face = self._faces[i]
-            if i_del in [face.a, face.b, face.c] and i_split in [face.a, face.b, face.c]:
-                f_del.append(i)
-        if len(f_del) != 2:
-            raise GeometricalProblem(f"Edge to delete is part of {len(f_del)} triangles instead of 2.")
-        for i in f_del:
-            del(self._faces_exists[self._faces_exists.index(i)])
-        
-        # modify the faces that contain v_del only
         f_modified = []
-        for i in self._faces_exists:
+        for i in v_del.nearfaces:
             face = self._faces[i]
-            if i_del in [face.a, face.b, face.c]:
+            if i_split in [face.a, face.b, face.c]:
+                f_del.append(i)
+            else:
                 f_modified.append(i)
+                v_split.add_nearface(i)
                 v_idx_in_face = [face.a, face.b, face.c].index(i_del)
                 setattr(face, ['a', 'b', 'c'][v_idx_in_face], i_split)
                 self._faces[i] = face
+        if len(f_del) != 2:
+            raise GeometricalProblem(f"Edge to delete is part of {len(f_del)} triangles instead of 2.")
 
-        common_neigbhours = []
+        common_neighbours = []
         for i in f_del:
             face = self._faces[i]
             for idx in [face.a, face.b, face.c]:
                 if idx != i_del and idx != i_split:
-                    common_neigbhours.append(idx)
-        if len(common_neigbhours) != 2:
-            raise GeometricalProblem(f"Edge to delete has {len(common_neigbhours)} common neighbours with v_split, instead of 2.")
-        n_1 = common_neigbhours[0]
-        n_2 = common_neigbhours[1]
+                    common_neighbours.append(idx)
+        if len(common_neighbours) != 2:
+            raise GeometricalProblem(f"Edge to delete has {len(common_neighbours)} common neighbours with v_split, instead of 2.")
+        n_1 = common_neighbours[0]
+        n_2 = common_neighbours[1]
+        for i in f_del:
+            del(self._faces_exists[self._faces_exists.index(i)])
+            for n in neighbours:
+                neighbor = self._vertices[n]
+                neighbor.del_nearface(i)
 
         # modify the edges that contain v_del only and delete the edges to v_del of neighbours common to v_split and v_del
         edges_to_delete = []
@@ -116,15 +115,14 @@ class Simulator:
                         b = i_split
                     self._edges[i] = (a, b)
         if len(edges_to_delete) != 3:
-            raise GeometricalProblem(f"Too many edges were deleted : {len(edges_to_delete)} instead of 3.")
+            raise GeometricalProblem(f"No the right number of edges were deleted : {len(edges_to_delete)} instead of 3.")
         for i in reversed(sorted(edges_to_delete)):
             del(self._edges[i])
         
         # delete the edges linking v_del to its neighbours and link them to v_split
-        neighbours = v_del.neighbours
         for i in neighbours:
             neighbor = self._vertices[i]
-            neighbor.delete_neighbor(i_del)
+            neighbor.del_neighbor(i_del)
             neighbor.add_neighbor(i_split)
             v_split.add_neighbor(i)
             self._vertices[i] = neighbor
@@ -140,12 +138,12 @@ class Simulator:
         )
         return result
     
-    def _is_valid_triangle(self, v1, v2, w):
+    def _is_valid_triangle(self, v1, v2, w, faces):
         valid = False
-        for i in self._faces_exists:
+        for i in faces:
             face = self._faces[i]
             face_idx = [face.a, face.b, face.c]
-            if v1 in face_idx and v2 in face_idx and w in face_idx:
+            if w in face_idx and v1 in face_idx and v2 in face_idx:
                 valid = True
                 break
         return valid
@@ -166,9 +164,13 @@ class Simulator:
             for neighbor in v1.neighbours:
                 if neighbor in v2.neighbours:
                     neighbours.append(neighbor)
+            nearfaces = []
+            for nearface in v1.nearfaces:
+                if nearface in v2.nearfaces:
+                    nearfaces.append(nearface)
             valid = True
             for w in neighbours:
-                valid *= self._is_valid_triangle(i1, i2, w)
+                valid *= self._is_valid_triangle(i1, i2, w, nearfaces)
             valid *= len(neighbours) == 2
             if valid and len(neighbours) > 1:
                 edges_to_select.append(i)
@@ -195,17 +197,17 @@ class Simulator:
             v2 = self._vertices[i2]
             edges_not_to_select = []
 
-            # 1. At most two vertices may be collapsed into one.
+
             for i, idx in enumerate(edges_to_select):
+                # 1. At most two vertices may be collapsed into one.
                 edge = self._edges[idx]
                 if i1 in edge or i2 in edge and i not in edges_not_to_select:
                     edges_not_to_select.append(i)
-
-            # 3. For each edge e1 = (v1, v2) that will be collapsed and
-            # any edge e2 = (w1,w2) forming a quadrilateral (v1, v2,
-            # w1,w2) with e1 in Mi, e1 and e2 cannot be collapsed in
-            # the same batch.
-            for i, idx in enumerate(edges_to_select):
+                    
+                # 3. For each edge e1 = (v1, v2) that will be collapsed and
+                # any edge e2 = (w1,w2) forming a quadrilateral (v1, v2,
+                # w1,w2) with e1 in Mi, e1 and e2 cannot be collapsed in
+                # the same batch.
                 (ia, ib) = self._edges[idx]
                 diagonal_exists = ia in v1.neighbours or ia in v2.neighbours or ib in v1.neighbours or ib in v2.neighbours
                 square_exists = (ia in v1.neighbours and ib in v2.neighbours) or (ib in v1.neighbours and ia in v2.neighbours)
@@ -267,8 +269,8 @@ class Simulator:
                       [0,0,0,0],
                       [0,0,0,0],
                       [0,0,0,0])
-        for face in near_faces:
-            a,b,c = face
+        for i in near_faces:
+            a,b,c = self._faces[i]
 
             # Nous choisissons 2 vecteurs appartenant au plan définit par la face
             vec1 = self._vertices[c].coordinates - self._vertices[a].coordinates 
