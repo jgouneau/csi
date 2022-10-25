@@ -196,7 +196,7 @@ def main():
     if timestamp:
         now = datetime.now().strftime("_%d_%H%M%S")
         os.makedirs(directory + "timestamped/", exist_ok=True)
-        path_to_obja_stamped = directory + "timestamped/" + obj + now + ".obja"
+        path_to_obja_stamped = directory + "timestamped/" + obj + now + color* "_colored"+  ".obja"
         shutil.copyfile(path_to_obja,path_to_obja_stamped)       
 
 
