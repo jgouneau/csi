@@ -70,10 +70,13 @@ class Decimater(obja.Model):
         """
     
         operations = []
+        
+        # Remove the faces
         for face_index in M0["faces"]:
             self.deleted_faces.append(face_index)
             operations.append(('face', face_index, self.faces[face_index]))
 
+        # Remove the vertex
         for vertex_index in M0["vertices"]:
             operations.append(('vertex', vertex_index, self.vertices[vertex_index]))
         print("M0 Done")
@@ -95,6 +98,7 @@ class Decimater(obja.Model):
         operations = []
         simulator = sim.Simulator(self.vertices, self.faces)
 
+        # Compress thee model
         print("Begining compression")
         compressing = True
         steps = 0
@@ -149,6 +153,7 @@ def main():
     """
     Runs the program on the model given as parameter.
     """
+    # Parse the arguments
     parser = argparse.ArgumentParser(
         description='Convert an obj object to an obja')
     parser.add_argument('obj_file', 
@@ -168,29 +173,31 @@ def main():
                         help='Color each newly added face for each batch if specified')
     args = parser.parse_args()
 
-
+    # Get the arguments
     timestamp = args.timestamp
     color = args.color
     obj = args.obj_file.split(".obj")[0]
     obj = obj.split(".obj")[0]
     directory = args.model_directory
-
     path_to_obj = directory + obj + ".obj"
     path_to_obja = directory + obj + ".obja"
 
+
+    # Compress the model
     np.seterr(invalid = 'raise')
     model = Decimater(color)
     model.parse_file(path_to_obj)
 
+    # Write the model
     with open(path_to_obja, 'w') as output:
         model.contract(output)
 
-        # Create a copy with a time stamp
-        if timestamp:
-            now = datetime.now().strftime("_%d_%H%M%S")
-            os.makedirs(directory + "timestamped/", exist_ok=True)
-            path_to_obja_stamped = directory + "timestamped/" + obj + now + ".obja"
-            shutil.copyfile(path_to_obja,path_to_obja_stamped)       
+    # Create a copy with a time stamp
+    if timestamp:
+        now = datetime.now().strftime("_%d_%H%M%S")
+        os.makedirs(directory + "timestamped/", exist_ok=True)
+        path_to_obja_stamped = directory + "timestamped/" + obj + now + ".obja"
+        shutil.copyfile(path_to_obja,path_to_obja_stamped)       
 
 
 if __name__ == '__main__':
