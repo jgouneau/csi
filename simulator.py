@@ -186,15 +186,15 @@ class Simulator:
                 i1,i2 = selected_edge
                 v1 = self._vertices[i1]
                 v2 = self._vertices[i2]
-                cost_v1 = self.get_contraction_cost(self, v1)
-                cost_v2 = self.get_contraction_cost(self, v2)
+                cost_v1 = self.get_contraction_cost(v1)
+                cost_v2 = self.get_contraction_cost(v2)
                 costs.append(cost_v1)
                 costs.append(cost_v2)
             argmin = np.argmin(costs)
             if argmin%2 == 0 :
-                edge_idx = argmin/2
+                edge_idx = argmin//2
             else:
-                edge_idx = (argmin-1)/2
+                edge_idx = (argmin-1)//2
 
             # delete edge
             del(edges_to_select[i_rand])
@@ -274,26 +274,27 @@ class Simulator:
         """Retourne la matrice Q permettant le calcul de l'erreur sur un sommet"""
 
         near_faces = v.nearfaces
-        Q = np.matrix([0,0,0,0],
-                      [0,0,0,0],
-                      [0,0,0,0],
-                      [0,0,0,0])
+        Q = np.array([[0.0,0.0,0.0,0.],
+                      [0.0,0.0,0.0,0.0],
+                      [0.0,0.0,0.0,0.0],
+                      [0.0,0.0,0.0,0.0]])
         for i in near_faces:
-            a,b,c = self._faces[i]
+            face = self._faces[i]
+  
 
             # Nous choisissons 2 vecteurs appartenant au plan définit par la face
-            vec1 = self._vertices[c].coordinates - self._vertices[a].coordinates 
-            vec2 = self._vertices[b].coordinates - self._vertices[a].coordinates
+            vec1 = self._vertices[face.c].coordinates - self._vertices[face.a].coordinates 
+            vec2 = self._vertices[face.b].coordinates - self._vertices[face.a].coordinates
             
             #Nous cherchons à obtenir les 4 coefficients (x,y,z,d) de l'équation du plan défini par la face
             cp = np.cross(vec1, vec2)
             x, y, z = cp
-            d = np.dot(cp, self._vertices[c].coordinates)
+            d = np.dot(cp, self._vertices[face.c].coordinates)
 
-            Q += np.matrix([x*x,x*y,x*z,x*d],
+            Q += np.array([[x*x,x*y,x*z,x*d],
                            [x*y, y*y,y*z, y*d],
                            [x*z, y*z, z*z, z*d],
-                           [x*d, y*d, z*d, d*d])
+                           [x*d, y*d, z*d, d*d]])
         return Q
     
     def get_contraction_cost(self, v):
@@ -301,8 +302,8 @@ class Simulator:
         """Retourne le cout/erreur associé à un sommet"""
 
         a,b,c = v.coordinates
-        Q = self.get_Q_Matrix(self, v)
+        Q = self.get_Q_matrix(v)
 
         # v_transpose * G * v où v_transpose = (a,b,c,1)
-        cost = Q[0][0]*a*a + 2*Q[1][2]*a*b + 2*Q[1][3]*a*c + 2*Q[1][4]*a + Q[2][2]*b*b + 2*Q[2][3]*b*c + 2*Q[2][4]*b + Q[3][3]*c*c + 2*Q[3][4]*c + Q[4][4]*a*b
+        cost = Q[0][0]*a*a + 2*Q[0][1]*a*b + 2*Q[0][2]*a*c + 2*Q[0][3]*a + Q[1][1]*b*b + 2*Q[1][2]*b*c + 2*Q[1][3]*b + Q[2][2]*c*c + 2*Q[2][3]*c + Q[3][3]*a*b
         return cost
