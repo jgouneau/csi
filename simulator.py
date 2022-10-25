@@ -276,13 +276,9 @@ class Simulator:
         """Retourne la matrice Q permettant le calcul de l'erreur sur un sommet"""
 
         near_faces = v.nearfaces
-        Q = np.array([[0.0,0.0,0.0,0.],
-                      [0.0,0.0,0.0,0.0],
-                      [0.0,0.0,0.0,0.0],
-                      [0.0,0.0,0.0,0.0]])
+        Q = np.zeros((4,4))
         for i in near_faces:
             face = self._faces[i]
-  
 
             # Nous choisissons 2 vecteurs appartenant au plan définit par la face
             vec1 = self._vertices[face.c].coordinates - self._vertices[face.a].coordinates 
@@ -304,8 +300,9 @@ class Simulator:
         """Retourne le cout/erreur associé à un sommet"""
 
         a,b,c = v.coordinates
+        v_transpose = np.array([[a,b,c,1]])
+        v_regular = v_transpose.transpose()
         Q = self.get_Q_matrix(v)
 
-        # v_transpose * G * v où v_transpose = (a,b,c,1)
-        cost = Q[0][0]*a*a + 2*Q[0][1]*a*b + 2*Q[0][2]*a*c + 2*Q[0][3]*a + Q[1][1]*b*b + 2*Q[1][2]*b*c + 2*Q[1][3]*b + Q[2][2]*c*c + 2*Q[2][3]*c + Q[3][3]*a*b
+        cost = np.matmul(np.matmul(v_transpose , Q),v_regular)[0][0]
         return cost
