@@ -180,12 +180,21 @@ class Simulator:
             i_rand = np.random.randint(0, len(edges_to_select))
             edge_idx = edges_to_select[i_rand]
 
-            """ costs = []
+            costs = []
             for i in range(len(edges_to_select)):
-                v1, v2 = edges_to_select[i]
-                current_cost = self.get_contraction_cost(self, self._vertices[v1])
-                costs.append(current_cost)
-            edge_idx = np.argmin(costs) """
+                selected_edge = self._edges[edges_to_select[i]]
+                i1,i2 = selected_edge
+                v1 = self._vertices[i1]
+                v2 = self._vertices[i2]
+                cost_v1 = self.get_contraction_cost(self, v1)
+                cost_v2 = self.get_contraction_cost(self, v2)
+                costs.append(cost_v1)
+                costs.append(cost_v2)
+            argmin = np.argmin(costs)
+            if argmin%2 == 0 :
+                edge_idx = argmin/2
+            else:
+                edge_idx = (argmin-1)/2
 
             # delete edge
             del(edges_to_select[i_rand])
@@ -261,11 +270,11 @@ class Simulator:
         M0 = {"faces": self._faces_exists, "vertices": self._vertices_exists}
         return M0
 
-    def get_G_matrix(self, v):
-        """Retourne la matrice G permettant le calcul de l'erreur sur un sommet"""
+    def get_Q_matrix(self, v):
+        """Retourne la matrice Q permettant le calcul de l'erreur sur un sommet"""
 
         near_faces = v.nearfaces
-        G = np.matrix([0,0,0,0],
+        Q = np.matrix([0,0,0,0],
                       [0,0,0,0],
                       [0,0,0,0],
                       [0,0,0,0])
@@ -281,19 +290,19 @@ class Simulator:
             x, y, z = cp
             d = np.dot(cp, self._vertices[c].coordinates)
 
-            G += np.matrix([x*x,x*y,x*z,x*d],
+            Q += np.matrix([x*x,x*y,x*z,x*d],
                            [x*y, y*y,y*z, y*d],
                            [x*z, y*z, z*z, z*d],
                            [x*d, y*d, z*d, d*d])
-        return G
+        return Q
     
     def get_contraction_cost(self, v):
 
         """Retourne le cout/erreur associé à un sommet"""
 
         a,b,c = v.coordinates
-        G = self.get_G_Matrix(self, v)
+        Q = self.get_Q_Matrix(self, v)
 
         # v_transpose * G * v où v_transpose = (a,b,c,1)
-        cost = G[0][0]*a*a + 2*G[1][2]*a*b + 2*G[1][3]*a*c + 2*G[1][4]*a + G[2][2]*b*b + 2*G[2][3]*b*c + 2*G[2][4]*b + G[3][3]*c*c + 2*G[3][4]*c + G[4][4]*a*b
+        cost = Q[0][0]*a*a + 2*Q[1][2]*a*b + 2*Q[1][3]*a*c + 2*Q[1][4]*a + Q[2][2]*b*b + 2*Q[2][3]*b*c + 2*Q[2][4]*b + Q[3][3]*c*c + 2*Q[3][4]*c + Q[4][4]*a*b
         return cost
