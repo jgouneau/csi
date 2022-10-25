@@ -177,12 +177,9 @@ class Simulator:
 
         while edges_to_select:
             # select edge
-            i_rand = np.random.randint(0, len(edges_to_select))
-            edge_idx = edges_to_select[i_rand]
-
             costs = []
-            for i in range(len(edges_to_select)):
-                selected_edge = self._edges[edges_to_select[i]]
+            for i in edges_to_select:
+                selected_edge = self._edges[i]
                 i1,i2 = selected_edge
                 v1 = self._vertices[i1]
                 v2 = self._vertices[i2]
@@ -192,12 +189,13 @@ class Simulator:
                 costs.append(cost_v2)
             argmin = np.argmin(costs)
             if argmin%2 == 0 :
-                edge_idx = argmin//2
+                idx = argmin//2
             else:
-                edge_idx = (argmin-1)//2
+                idx = (argmin-1)//2
 
             # delete edge
-            del(edges_to_select[i_rand])
+            edge_idx = edges_to_select[idx]
+            del(edges_to_select[idx])
             edge = self._edges[edge_idx]
             self._batch.append(edge)
 
