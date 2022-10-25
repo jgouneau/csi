@@ -14,9 +14,10 @@ class Decimater(obja.Model):
     """
     SQUEZZE
     """
-    def __init__(self):
+    def __init__(self, color=False):
         super().__init__()
         self.deleted_faces = []
+        self.color = color
 
 
     def edge_collapse(self, deletion):
@@ -110,8 +111,9 @@ class Decimater(obja.Model):
                 compressing = False
                 break
             operations += self.edge_collapse(deletion)
-            if steps > 1 and new_batch:
-                operations += self.reset_colors()
+            if self.color:
+                if steps > 1 and new_batch:
+                    operations += self.reset_colors()
 
 
         # Build the M0 model
@@ -121,31 +123,26 @@ class Decimater(obja.Model):
         # To rebuild the model, run operations in reverse order
         operations.reverse()
 
-        # Modify the index of the faces
-        modified_operations = []
-        self.deleted_faces.reverse()
-        for (ty, index, value) in operations :
-            if ty in ("face", "new_face", "ef", "color_face"):
-                index = self.deleted_faces.index(index)
-            modified_operations.append((ty, index, value))
-
         # Write the result in output file
         output_model = obja.Output(output, random_color=False)
 
         # Add the operations
-        for (ty, index, value) in modified_operations:
+        self.deleted_faces.reverse()
+        for (ty, index, value) in operations:
             if ty == "vertex":
-                output_model.add_vertex(index, value)
-            elif ty == "face":
-                output_model.add_face(index, value)  
-            elif ty == "new_face":
-                output_model.add_face(index, value, color=(0,1,0))   
+                output_model.add_vertex(index, value) 
             elif ty == "ev":
-                output_model.edit_vertex(index, value)            
-            elif ty == "ef":
-                output_model.edit_face(index, value)
-            elif ty == "color_face":
-                output_model.color_face(index, value)
+                output_model.edit_vertex(index, value)
+            if ty in ("face", "new_face", "ef", "color_face"):
+                index = self.deleted_faces.index(index)
+                if ty == "face":
+                    output_model.add_face(index, value)  
+                elif ty == "new_face":
+                    output_model.add_face(index, value, color=(0,1,0) * self.color)  
+                elif ty == "ef":
+                    output_model.edit_face(index, value)
+                elif ty == "color_face":
+                    output_model.color_face(index, value)
             
 
 def main():
@@ -159,15 +156,21 @@ def main():
     parser.add_argument('--model_directory', 
                         default="example/",
                         help='The directory where the obj model is placed, example/ per default')
-    parser.add_argument('--timestamp', 
+    parser.add_argument('--timestamp', '-t',
                         default=False,
                         const=True,
                         action='store_const',
                         help='Create the obja with a timestamp in the name of the file if specified')
+    parser.add_argument('--color', '-c',
+                        default=False,
+                        const=True,
+                        action='store_const',
+                        help='Color each newly added face for each batch if specified')
     args = parser.parse_args()
 
 
     timestamp = args.timestamp
+    color = args.color
     obj = args.obj_file.split(".obj")[0]
     obj = obj.split(".obj")[0]
     directory = args.model_directory
@@ -176,7 +179,7 @@ def main():
     path_to_obja = directory + obj + ".obja"
 
     np.seterr(invalid = 'raise')
-    model = Decimater()
+    model = Decimater(color)
     model.parse_file(path_to_obj)
 
     with open(path_to_obja, 'w') as output:
