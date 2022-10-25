@@ -197,14 +197,13 @@ class Simulator:
             # delete edge
             edge_idx = edges_to_select[idx]
             del(edges_to_select[idx])
-            a, b = self._edges[edge_idx]
+            i1, i2 = self._edges[edge_idx]
             if v_del_first:
-                edge_del = (a, b)
+                edge_del = (i1, i2)
             else:
-                edge_del = (b, a)
+                edge_del = (i2, i1)
             self._batch.append(edge_del)
 
-            (i1, i2) = edge
             v1 = self._vertices[i1]
             v2 = self._vertices[i2]
             edges_not_to_select = []
