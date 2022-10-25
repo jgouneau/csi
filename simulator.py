@@ -188,7 +188,8 @@ class Simulator:
                 costs.append(cost_v1)
                 costs.append(cost_v2)
             argmin = np.argmin(costs)
-            if argmin%2 == 0 :
+            v_del_first = argmin%2 == 0
+            if v_del_first:
                 idx = argmin//2
             else:
                 idx = (argmin-1)//2
@@ -196,8 +197,12 @@ class Simulator:
             # delete edge
             edge_idx = edges_to_select[idx]
             del(edges_to_select[idx])
-            edge = self._edges[edge_idx]
-            self._batch.append(edge)
+            a, b = self._edges[edge_idx]
+            if v_del_first:
+                edge_del = (a, b)
+            else:
+                edge_del = (b, a)
+            self._batch.append(edge_del)
 
             (i1, i2) = edge
             v1 = self._vertices[i1]
