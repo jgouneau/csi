@@ -61,6 +61,7 @@ class Simulator:
         self._vertices_exists = list(range(len(vertices)))
         self._batch = []
         self._i_batch = 0
+        self._initial_n_faces = len(faces)
     
     def _add_face_edges(self, face):
         for (a, b) in [(face.a, face.b), (face.b, face.c), (face.c, face.a)]:
@@ -153,6 +154,7 @@ class Simulator:
         self._batch = []
         self._i_batch = 0
         edges_to_select = []
+        costs = []
         self._Q_list = dict()
 
         # 2. For each edge e = (v1, v2) that will be collapsed and
@@ -176,19 +178,23 @@ class Simulator:
             valid *= len(neighbours) == 2
             if valid and len(neighbours) > 1:
                 edges_to_select.append(i)
-
-        while edges_to_select:
-            # select edge
-            costs = []
-            for i in edges_to_select:
-                selected_edge = self._edges[i]
-                i1,i2 = selected_edge
-                v1 = self._vertices[i1]
-                v2 = self._vertices[i2]
                 cost_v1 = self.get_contraction_cost(v1, v2, i1, i2)
                 cost_v2 = self.get_contraction_cost(v2, v1, i2, i1)
                 costs.append(cost_v1)
                 costs.append(cost_v2)
+
+        while edges_to_select:
+            # select edge
+            # costs = []
+            # for i in edges_to_select:
+            #     selected_edge = self._edges[i]
+            #     i1,i2 = selected_edge
+            #     v1 = self._vertices[i1]
+            #     v2 = self._vertices[i2]
+            #     cost_v1 = self.get_contraction_cost(v1, v2, i1, i2)
+            #     cost_v2 = self.get_contraction_cost(v2, v1, i2, i1)
+            #     costs.append(cost_v1)
+            #     costs.append(cost_v2)
             argmin = np.argmin(costs)
             v_del_first = argmin%2 == 0
             if v_del_first:
@@ -199,6 +205,8 @@ class Simulator:
             # delete edge
             edge_idx = edges_to_select[idx]
             del(edges_to_select[idx])
+            del(costs[idx*2+1])
+            del(costs[idx*2])
             i1, i2 = self._edges[edge_idx]
             if v_del_first:
                 edge_del = (i1, i2)
@@ -231,6 +239,8 @@ class Simulator:
 
             for i in reversed(sorted(edges_not_to_select)):
                 del(edges_to_select[i])
+                del(costs[2*i+1])
+                del(costs[2*i])
 
     def deletion(self):
         """Renvoie les infos de la prochaine arête à supprimer et la supprime.
@@ -252,7 +262,7 @@ class Simulator:
             self.generate_batch()
             print(f"Next batch: {len(self._batch)} edges selected")
             new_batch = True
-        if not self._batch:
+        if not self._batch or len(self._faces_exists) < self._initial_n_faces*0.07:
             raise NoMoreCompression("No more edges respecting the topological constraints")
         (i_del, i_split) = self._batch[self._i_batch]
         self._i_batch += 1
