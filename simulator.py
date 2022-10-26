@@ -1,3 +1,4 @@
+import time
 from tkinter import SEL_FIRST
 import numpy as np
 
@@ -152,6 +153,7 @@ class Simulator:
         self._batch = []
         self._i_batch = 0
         edges_to_select = []
+        self._Q_list = dict()
 
         # 2. For each edge e = (v1, v2) that will be collapsed and
         # any other vertex w that is incident to both v1 and v2,
@@ -183,8 +185,8 @@ class Simulator:
                 i1,i2 = selected_edge
                 v1 = self._vertices[i1]
                 v2 = self._vertices[i2]
-                cost_v1 = self.get_contraction_cost(v1,v2)
-                cost_v2 = self.get_contraction_cost(v2,v1)
+                cost_v1 = self.get_contraction_cost(v1, v2, i1, i2)
+                cost_v2 = self.get_contraction_cost(v2, v1, i2, i1)
                 costs.append(cost_v1)
                 costs.append(cost_v2)
             argmin = np.argmin(costs)
@@ -296,14 +298,21 @@ class Simulator:
             Q += np.array([x*x, x*y, x*z, x*d, y*y, y*z, y*d, z*z, z*d, d*d])
         return Q
     
-    def get_contraction_cost(self, v_del, v_split):
+    def get_contraction_cost(self, v_del, v_split, i_del, i_split):
 
         """Retourne le cout de contraction d'une arete"""
 
         a,b,c = v_del.coordinates
-        Q_del = self.get_Q_matrix(v_del)
-        Q_split = self.get_Q_matrix(v_split)
+        Q_del = self._Q_list.get(i_del, None)
+        if Q_del is None:
+            Q_del = self.get_Q_matrix(v_del)*np.array([1, 2, 2, 2, 1, 2, 2, 1, 2, 1])
+            self._Q_list[i_del] = Q_del
+            
+        Q_split = self._Q_list.get(i_split, None)
+        if Q_split is None:
+            Q_split = self.get_Q_matrix(v_split)*np.array([1, 2, 2, 2, 1, 2, 2, 1, 2, 1])
+            self._Q_list[i_split] = Q_split
 
         abc = np.array([a*a, a*b, a*c, a, b*b, b*c, b, c*c, c, 1])
-        cost = np.sum(abc*(Q_del+Q_split)*np.array([1, 2, 2, 2, 1, 2, 2, 1, 2, 1]))
+        cost = np.sum(abc*(Q_del+Q_split))
         return cost
