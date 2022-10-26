@@ -170,12 +170,12 @@ class Simulator:
                     neighbours.append(neighbor)
             nearfaces = []
             for nearface in v1.nearfaces:
-                if nearface in v2.nearfaces:
-                    nearfaces.append(nearface)
+                nearfaces.append(nearface)
+            for nearface in v2.nearfaces:
+                nearfaces.append(nearface)
             valid = True
             for w in neighbours:
                 valid *= self._is_valid_triangle(i1, i2, w, nearfaces)
-            valid *= len(neighbours) == 2
             if valid and len(neighbours) > 1:
                 edges_to_select.append(i)
                 cost_v1 = self.get_contraction_cost(v1, v2, i1, i2)
@@ -230,9 +230,9 @@ class Simulator:
                 # w1,w2) with e1 in Mi, e1 and e2 cannot be collapsed in
                 # the same batch.
                 (ia, ib) = self._edges[idx]
-                diagonal_exists = ia in v1.neighbours or ia in v2.neighbours or ib in v1.neighbours or ib in v2.neighbours
+                # diagonal_exists = ia in v1.neighbours or ia in v2.neighbours or ib in v1.neighbours or ib in v2.neighbours
                 square_exists = (ia in v1.neighbours and ib in v2.neighbours) or (ib in v1.neighbours and ia in v2.neighbours)
-                is_valid_quadrilateral = square_exists and diagonal_exists
+                is_valid_quadrilateral = square_exists
                 # is_valid_quadrilateral = (self._is_valid_triangle(i1, i2, ia) or self._is_valid_triangle(i1, i2, ib)) and (self._is_valid_triangle(i1, ia, ib) or self._is_valid_triangle(i2, ia, ib))
                 if is_valid_quadrilateral and i not in edges_not_to_select:
                     edges_not_to_select.append(i)
