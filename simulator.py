@@ -273,28 +273,27 @@ class Simulator:
         return M0
 
     def get_Q_matrix(self, v):
-        """Retourne la matrice Q associée à un sommet, représentant les plans dans lequel le sommet se situe"""
+        """Retourne la matrice Q permettant le calcul de l'erreur sur un sommet"""
 
         near_faces = v.nearfaces
-        Q = np.zeros((4,4))
+        Q = np.zeros(10)
         for i in near_faces:
             face = self._faces[i]
+  
 
             # Nous choisissons 2 vecteurs appartenant au plan définit par la face
-            vec1 = self._vertices[face.c].coordinates - self._vertices[face.a].coordinates 
-            vec2 = self._vertices[face.b].coordinates - self._vertices[face.a].coordinates
-            v1 = self._vertices[face.a].coordinates
-            
-            #Nous cherchons à obtenir les 4 coefficients (x,y,z,d) de l'équation du plan défini par la face
-            cp = np.cross(vec1, vec2)
-            x, y, z = cp
-            moins_d = np.dot(cp, self._vertices[face.c].coordinates)
-            d = -moins_d
+            a = self._vertices[face.a].coordinates
+            b = self._vertices[face.c].coordinates 
+            c = self._vertices[face.b].coordinates
+            x1, x2, x3 = c-a
+            y1, y2, y3 = b-a
 
-            Q += np.array([[x*x,x*y,x*z,x*d],
-                           [x*y, y*y,y*z, y*d],
-                           [x*z, y*z, z*z, z*d],
-                           [x*d, y*d, z*d, d*d]])
+            #Nous cherchons à obtenir les 4 coefficients (x,y,z,d) de l'équation du plan défini par la face
+            x = x2*y3-x3*y2
+            y = x3*y1-x1*y3
+            z = x1*y2-x2*y1
+            d = -np.dot(np.array([x, y, z]), c)
+            Q += np.array([x*x, x*y, x*z, x*d, y*y, y*z, y*d, z*z, z*d, d*d])
         return Q
     
     def get_contraction_cost(self, v_del, v_split):
@@ -302,10 +301,9 @@ class Simulator:
         """Retourne le cout de contraction d'une arete"""
 
         a,b,c = v_del.coordinates
-        v_transpose = np.array([[a,b,c,1]])
-        v_regular = v_transpose.transpose()
         Q_del = self.get_Q_matrix(v_del)
         Q_split = self.get_Q_matrix(v_split)
 
-        cost = np.matmul(np.matmul(v_transpose , Q_del+Q_split),v_regular)[0][0]
+        abc = np.array([a*a, a*b, a*c, a, b*b, b*c, b, c*c, c, 1])
+        cost = np.sum(abc*(Q_del+Q_split)*np.array([1, 2, 2, 2, 1, 2, 2, 1, 2, 1]))
         return cost
