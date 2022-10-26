@@ -296,11 +296,8 @@ class Simulator:
             z = x1*y2-x2*y1
             
             #normalisation du vecteur normal
-            norm = x*x + y*y + z*z
-            x = x/norm
-            y = y/norm
-            z = z/norm
-            d = -np.dot(np.array([x, y, z]), c)
+            X = np.array([x, y, z])
+            d = -np.dot(X/np.dot(X, X), c)
             Q += np.array([x*x, x*y, x*z, x*d, y*y, y*z, y*d, z*z, z*d, d*d])
         return Q
     
