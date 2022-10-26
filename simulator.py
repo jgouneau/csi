@@ -290,10 +290,16 @@ class Simulator:
             x1, x2, x3 = c-a
             y1, y2, y3 = b-a
 
-            #Nous cherchons à obtenir les 4 coefficients (x,y,z,d) de l'équation du plan défini par la face
+            #Nous cherchons à obtenir les 4 coefficients (x,y,z,d) de l'équation du plan défini par la face, avec x²+y²+² = 1
             x = x2*y3-x3*y2
             y = x3*y1-x1*y3
             z = x1*y2-x2*y1
+            
+            #normalisation du vecteur normal
+            norm = x*x + y*y + z*z
+            x = x/norm
+            y = y/norm
+            z = z/norm
             d = -np.dot(np.array([x, y, z]), c)
             Q += np.array([x*x, x*y, x*z, x*d, y*y, y*z, y*d, z*z, z*d, d*d])
         return Q
