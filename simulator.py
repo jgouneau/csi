@@ -273,7 +273,7 @@ class Simulator:
         return M0
 
     def get_Q_matrix(self, v):
-        """Retourne la matrice Q permettant le calcul de l'erreur sur un sommet"""
+        """Retourne la matrice Q associée à un sommet, représentant les plans dans lequel le sommet se situe"""
 
         near_faces = v.nearfaces
         Q = np.zeros((4,4))
@@ -299,7 +299,7 @@ class Simulator:
     
     def get_contraction_cost(self, v_del, v_split):
 
-        """Retourne le cout/erreur associé à un sommet"""
+        """Retourne le cout de contraction d'une arete"""
 
         a,b,c = v_del.coordinates
         v_transpose = np.array([[a,b,c,1]])
