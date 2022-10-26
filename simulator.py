@@ -183,8 +183,8 @@ class Simulator:
                 i1,i2 = selected_edge
                 v1 = self._vertices[i1]
                 v2 = self._vertices[i2]
-                cost_v1 = self.get_contraction_cost(v1)
-                cost_v2 = self.get_contraction_cost(v2)
+                cost_v1 = self.get_contraction_cost(v1,v2)
+                cost_v2 = self.get_contraction_cost(v2,v1)
                 costs.append(cost_v1)
                 costs.append(cost_v2)
             argmin = np.argmin(costs)
@@ -283,11 +283,13 @@ class Simulator:
             # Nous choisissons 2 vecteurs appartenant au plan définit par la face
             vec1 = self._vertices[face.c].coordinates - self._vertices[face.a].coordinates 
             vec2 = self._vertices[face.b].coordinates - self._vertices[face.a].coordinates
+            v1 = self._vertices[face.a].coordinates
             
             #Nous cherchons à obtenir les 4 coefficients (x,y,z,d) de l'équation du plan défini par la face
             cp = np.cross(vec1, vec2)
             x, y, z = cp
-            d = np.dot(cp, self._vertices[face.c].coordinates)
+            moins_d = np.dot(cp, self._vertices[face.c].coordinates)
+            d = -moins_d
 
             Q += np.array([[x*x,x*y,x*z,x*d],
                            [x*y, y*y,y*z, y*d],
@@ -295,14 +297,15 @@ class Simulator:
                            [x*d, y*d, z*d, d*d]])
         return Q
     
-    def get_contraction_cost(self, v):
+    def get_contraction_cost(self, v_del, v_split):
 
         """Retourne le cout/erreur associé à un sommet"""
 
-        a,b,c = v.coordinates
+        a,b,c = v_del.coordinates
         v_transpose = np.array([[a,b,c,1]])
         v_regular = v_transpose.transpose()
-        Q = self.get_Q_matrix(v)
+        Q_del = self.get_Q_matrix(v_del)
+        Q_split = self.get_Q_matrix(v_split)
 
-        cost = np.matmul(np.matmul(v_transpose , Q),v_regular)[0][0]
+        cost = np.matmul(np.matmul(v_transpose , Q_del+Q_split),v_regular)[0][0]
         return cost
