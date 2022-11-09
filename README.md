@@ -1,4 +1,8 @@
 # Projet CSI
+
+You can find the presentation slides at the root : ``Présentation CSI.pdf``
+
+```bash
 usage: squeeze.py [-h] [-m MODEL_DIRECTORY] [-t] [-c] obj_file
 
 Convert an obj object to an obja
@@ -12,3 +16,4 @@ optional arguments:
                         The directory where the obj model is placed, example/ as default
   -t, --timestamp       Create an obja with a timestamp in the name of the file if specified
   -c, --color           Color each newly added face for each batch if specified
+  ```
