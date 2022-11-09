@@ -1,6 +1,6 @@
 # Projet CSI
 
-You can find the presentation slides at the root : ``Présentation CSI.pdf``
+Vous pouvez trouver les slides de présentation à la racine : ``Présentation CSI.pdf``
 
 ```bash
 usage: squeeze.py [-h] [-m MODEL_DIRECTORY] [-t] [-c] obj_file
