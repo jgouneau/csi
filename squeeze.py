@@ -158,15 +158,15 @@ def main():
         description='Convert an obj object to an obja')
     parser.add_argument('obj_file', 
                         help='The name of the obj file (works with or without the .obj)')
-    parser.add_argument('--model_directory', 
+    parser.add_argument('-m','--model_directory', 
                         default="example/",
-                        help='The directory where the obj model is placed, example/ per default')
-    parser.add_argument('--timestamp', '-t',
+                        help='The directory where the obj model is placed, example/ as default')
+    parser.add_argument('-t', '--timestamp',
                         default=False,
                         const=True,
                         action='store_const',
-                        help='Create the obja with a timestamp in the name of the file if specified')
-    parser.add_argument('--color', '-c',
+                        help='Create an obja with a timestamp in the name of the file if specified')
+    parser.add_argument('-c','--color',
                         default=False,
                         const=True,
                         action='store_const',
